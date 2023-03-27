@@ -459,6 +459,7 @@
         mounted() {},
         methods: {
           async init() {
+
             querySetmealById(this.id).then((res) => {
               if (String(res.code) === '1') {
                 this.ruleForm = res.data

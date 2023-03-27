@@ -7,6 +7,7 @@ import boy.learning.reggie.dto.SetmealDto;
 import boy.learning.reggie.entity.Category;
 import boy.learning.reggie.entity.Dish;
 import boy.learning.reggie.entity.Setmeal;
+import boy.learning.reggie.entity.SetmealDish;
 import boy.learning.reggie.service.CategoryService;
 import boy.learning.reggie.service.SetmealDishService;
 import boy.learning.reggie.service.SetmealService;
@@ -16,8 +17,11 @@ import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -102,10 +106,12 @@ public class SetmealController {
 
     /**
      * 删除套餐
+     * 删除套餐时，将所有缓存全部删除
      * @param ids
      * @return
      */
     @DeleteMapping
+    @CacheEvict(value = "setmealCache",allEntries = true)
     public R<String> delete(@RequestParam List<Long> ids){
         log.info("删除套餐 ids = {}",ids);
 
@@ -120,6 +126,7 @@ public class SetmealController {
      * @return
      */
     @GetMapping("/list")
+    @Cacheable(value= "setmealCache" ,key = "#setmeal.categoryId + '_' + #setmeal.status")
     public R<List<Setmeal>> list(Setmeal setmeal){
         //根据categoryId和status查询套餐数据
         LambdaQueryWrapper<Setmeal> queryWrapper = new LambdaQueryWrapper<>();
@@ -131,6 +138,40 @@ public class SetmealController {
 
         return R.success(list);
 
+    }
+
+
+    /**
+     * 根据套餐的id查询出来套餐姓名和菜品，封装成结果返回
+     * @param id 套餐的id
+     * @return
+     */
+    @GetMapping("/{id}")
+    public R<SetmealDto> list(@PathVariable Long id){
+
+        SetmealDto setmealDto = new SetmealDto();
+
+        //根据id查出来setmeal
+        Setmeal setmeal = setmealService.getById(id);
+
+        //将setmeal拷贝到setmealDto
+        BeanUtils.copyProperties(setmeal,setmealDto);
+
+        //根据setmeal查出套餐的菜品
+        Long categoryId = setmeal.getCategoryId();
+        LambdaQueryWrapper<SetmealDish> lqw = new LambdaQueryWrapper();
+        lqw.eq (id!=null,SetmealDish::getSetmealId,id);
+        List<SetmealDish> list = setmealDishService.list(lqw);
+
+
+
+        //封装成setmealDto
+        setmealDto.setSetmealDishes(list);
+        setmealDto.setCategoryName(setmeal.getName());
+
+        System.out.println(setmealDto);
+
+        return R.success(setmealDto);
     }
 
 
