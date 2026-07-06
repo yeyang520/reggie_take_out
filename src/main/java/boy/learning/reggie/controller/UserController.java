@@ -63,6 +63,7 @@ public class UserController{
     }
 
 
+    // 加入redis
     /**
      * 移动端用户登录
      * @param map

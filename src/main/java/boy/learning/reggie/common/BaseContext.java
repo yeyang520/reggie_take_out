@@ -1,5 +1,7 @@
 package boy.learning.reggie.common;
 
+
+
 public class BaseContext{
     private static ThreadLocal<Long> threadLocal = new ThreadLocal<>();
 
